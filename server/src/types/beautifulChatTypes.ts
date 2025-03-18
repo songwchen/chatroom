@@ -10,7 +10,6 @@ export type Message = {
   id: string
   isEdited: boolean
   data: {
-    text: string
     [key: string]: any
   }
 }

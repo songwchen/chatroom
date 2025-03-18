@@ -8,10 +8,11 @@ import type {
   UserStatus,
   Room,
   LastMessage,
-  Message,
+  Message as AvcMessage,
   UsernameOptions,
 } from 'vue-advanced-chat'
-import { roomList, userList, messageList, roomAndUserMap } from './data'
+import type { Message as BtfMessage } from './types/beautifulChatTypes'
+import { roomList, avcUserList, messageList, roomAndUserMap } from './data'
 
 /** 創建 Express 應用 */
 const app = express()
@@ -22,13 +23,11 @@ const server = http.createServer(app)
 
 /** function */
 const getUserRooms = (userId: string): Room[] => {
-  const result = roomList.filter((room) =>
-    room.users.find((user) => user._id === userId)
-  )
+  const result = roomList.filter((room) => room.users.find((user) => user._id === userId))
   return result ?? []
 }
 
-const getRoomMessages = (roomId: string): Message[] => {
+const getRoomMessages = (roomId: string): AvcMessage[] => {
   const result = messageList[roomId]
   return result ?? []
 }
@@ -41,7 +40,7 @@ const io = new Server(server, {
   },
 })
 
-const socketIdAndUserMap: Record<string, RoomUser> = {}
+const userIdAndSocketMap: Record<string, Socket> = {}
 
 /** 處理 Socket.io 連接 */
 io.on('connection', (socket: Socket) => {
@@ -54,10 +53,10 @@ io.on('connection', (socket: Socket) => {
 
   /** 處理用戶加入 */
   socket.on('getInitData', (userId: string, cb) => {
-    const targetUserData = userList.find((userData) => userData._id === userId)
+    const targetUserData = avcUserList.find((userData) => userData._id === userId)
 
     if (targetUserData) {
-      socketIdAndUserMap[socket.id] = targetUserData
+      userIdAndSocketMap[userId] = socket
     }
 
     const targetRooms = getUserRooms(userId)
@@ -73,7 +72,7 @@ io.on('connection', (socket: Socket) => {
   })
 
   /** 使用者發送訊息 */
-  socket.on('sendMessage', (roomId: string, message: Message, cb) => {
+  socket.on('sendMessage', (roomId: string, message: AvcMessage, cb) => {
     let targetMessages = messageList[roomId]
     if (!targetMessages) {
       cb('Room Not Found')
@@ -83,13 +82,24 @@ io.on('connection', (socket: Socket) => {
       message._id = String(targetMessages.length)
     }
 
-    const recievingMessage = { ...message }
-    recievingMessage.senderId =
-      roomAndUserMap[roomId].find(
-        (userId: string) => userId !== message.senderId
-      ) ?? message._id
+    const recieverID =
+      roomAndUserMap[roomId].find((userId: string) => userId !== message.senderId) ?? message._id
 
-    socket.emit('recieveMessage', recievingMessage)
+    // AVC rerecievingMessage
+    // const recievingMessage = { ...message }
+
+    // Btf rerecievingMessage
+    const recievingMessage: BtfMessage = {
+      author: message.senderId,
+      type: 'text',
+      id: message._id,
+      isEdited: false,
+      data: {
+        text: message.content,
+      },
+    }
+
+    userIdAndSocketMap[recieverID].emit('recieveMessage', recievingMessage)
   })
 })
 

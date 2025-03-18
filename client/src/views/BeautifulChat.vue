@@ -4,7 +4,7 @@
       :participants="participants"
       :titleImageUrl="titleImageUrl"
       :onMessageWasSent="onMessageWasSent"
-      :messageList="messageList"
+      :messageList="messages"
       :newMessagesCount="newMessagesCount"
       :isOpen="isChatOpen"
       :close="closeChat"
@@ -33,18 +33,34 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
+import { useBeautifulChat } from './composables/useBeautifulChat'
 import type { User, Message } from '@/types/beautifulChatTypes'
+import { onUnmounted } from 'vue'
+import { onMounted } from 'vue'
+
+const { messages, initData, userDataFetched, recieveMessage, disconnectSocket } = useBeautifulChat()
+
+let cleanupRecieveMessage: (() => void) | null = null
+
+onMounted(() => {
+  cleanupRecieveMessage = recieveMessage(messages, 'btf')
+})
+
+onUnmounted(() => {
+  if (cleanupRecieveMessage) cleanupRecieveMessage()
+  disconnectSocket()
+})
 
 // 參與者資料
 const participants = reactive<User[]>([
+  // {
+  //   id: 'beautifulchatuser',
+  //   name: 'Beautiful Chat',
+  //   imageUrl: 'https://avatars3.githubusercontent.com/u/1915989?s=230&v=4',
+  // },
   {
-    id: 'user1',
-    name: 'Matteo',
-    imageUrl: 'https://avatars3.githubusercontent.com/u/1915989?s=230&v=4',
-  },
-  {
-    id: 'user2',
-    name: 'Support',
+    id: 'advancedchatuser',
+    name: 'Advanced Chat',
     imageUrl: 'https://avatars3.githubusercontent.com/u/37018832?s=200&v=4',
   },
 ])

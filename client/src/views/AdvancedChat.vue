@@ -19,11 +19,18 @@ import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useAdvancedChat } from './composables/useAdvancedChat'
 import { register } from 'vue-advanced-chat'
 import type { RoomUser, UserStatus, Room, LastMessage, Message } from 'vue-advanced-chat'
-import { useSocket } from '@/socket'
 import type { SendMessageDetailEvent, SendMessageObject } from '@/types/commonTypes'
 
-const { rooms, messages, initData, userDataFetched } = useAdvancedChat()
-const { sendMessage, recieveMessage } = useSocket()
+const {
+  isConnected,
+  rooms,
+  messages,
+  initData,
+  userDataFetched,
+  sendMessage,
+  recieveMessage,
+  disconnectSocket,
+} = useAdvancedChat()
 
 const roomId = ref('0')
 
@@ -94,11 +101,12 @@ const handleSendMessage = (message: SendMessageDetailEvent): void => {
 let cleanupRecieveMessage: (() => void) | null = null
 
 onMounted(() => {
-  cleanupRecieveMessage = recieveMessage(messages)
+  cleanupRecieveMessage = recieveMessage(messages, 'avc')
 })
 
 onUnmounted(() => {
   if (cleanupRecieveMessage) cleanupRecieveMessage()
+  disconnectSocket()
 })
 
 // const addNewMessage = (): void => {
